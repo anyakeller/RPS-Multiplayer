@@ -4,10 +4,11 @@ var player1 = $("#player1"); //current player status
 var player2 = $("#player2");
 
 //GLOBAL VAR STUFF
-var numPlayers = NaN;
 var yourUsername = "";
-var howManyActivePlayers = 0; //0 1 or 2
+var activePlayersOnline = 0; //0 1 or 2
 var whichPlayerYou = 0; //0 for not active, 1 or 2 for active
+var hasPlayer1 = false;
+var hasPlayer2 = false;
 
 // Firebase
 var config = {
@@ -23,9 +24,9 @@ var config = {
 firebase.initializeApp(config);
 var database = firebase.database();
 // Database var references
-var players = database.ref("onlinePlayers");
 var chatBox = database.ref("/chatRoom");
-var activePlayers = database.ref("activePlayers");
+var players = database.ref("players");
+var specatators = database.ref("spectators");
 // Initial Values
 var playerName = "";
 // Capture Button Click
@@ -36,14 +37,18 @@ $("#chooseUsernamethingy").on("click", function(event) {
     $("#usernameInputForm").hide();
 
     // If you can add a new active player
-    if (howManyActivePlayers < 2) {
-        howManyActivePlayers += 1;
-        whichPlayerYou = howManyActivePlayers;
-        var you = database.ref("/activePlayers/" + yourUsername);
+    if (activePlayersOnline < 2) {
+        activePlayersOnline += 1;
+        if (hasPlayer1) {
+            whichPlayerYou = 2;
+        } else {
+            whichPlayerYou = 1;
+        }
+
         console.log("New active Player", whichPlayerYou);
+        var you = database.ref("/players/" + whichPlayerYou);
     } else {
-        var you = database.ref("/onlinePlayers/" + yourUsername);
-        //if active players full
+        var you = database.ref("/spectators/" + yourUsername);
     }
     you.set({
         name: yourUsername,
@@ -69,7 +74,9 @@ $("#chooseUsernamethingy").on("click", function(event) {
 });
 // Firebase stuff
 players.on("value", function(snapshot) {
-    numPlayers = snapshot.numChildren();
+    hasPlayer1 = snapshot.child("1").exists();
+    hasPlayer2 = snapshot.child("2").exists();
+    activePlayersOnline = snapshot.numChildren();
 });
 
 database.ref().on(
