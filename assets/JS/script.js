@@ -1,7 +1,8 @@
 //GLOBAL HTML ELEMENT REFERENCES
 var playerInfo = $("#playerInfo"); //Displays who is playing
-var player1 = $("#player1"); //current player status
-var player2 = $("#player2");
+var player1UsernameSpan = $("#player1"); //current player status
+var player2UsernameSpan = $("#player2");
+var gameStatus = $("#gameStatus");
 
 //GLOBAL VAR STUFF
 var yourUsername = "";
@@ -20,6 +21,7 @@ var config = {
     messagingSenderId: "705283076455",
     appId: "1:705283076455:web:533ea7eb9e1330e2"
 };
+
 // Initialize Firebase
 firebase.initializeApp(config);
 var database = firebase.database();
@@ -29,6 +31,7 @@ var players = database.ref("players");
 var specatators = database.ref("spectators");
 // Initial Values
 var playerName = "";
+
 // Capture Button Click
 $("#chooseUsernamethingy").on("click", function(event) {
     yourUsername = $("#usernameField").val();
@@ -63,27 +66,36 @@ $("#chooseUsernamethingy").on("click", function(event) {
     //disconnect remove user
     you.onDisconnect().remove();
     youChat.onDisconnect().remove();
-    // Code for the push
-    // dataRef.ref().push({
-    //     name: name,
-    //     email: email,
-    //     age: age,
-    //     comment: comment,
-    //     dateAdded: firebase.database.ServerValue.TIMESTAMP
-    // });
 });
 // Firebase stuff
+//Setup page
 players.on("value", function(snapshot) {
     hasPlayer1 = snapshot.child("1").exists();
     hasPlayer2 = snapshot.child("2").exists();
     activePlayersOnline = snapshot.numChildren();
+    if (activePlayersOnline > 0) {
+        console.log("ppl playing");
+        if (hasPlayer1 && !hasPlayer2) {
+            var player1UserName = snapshot.child("1").val().name;
+
+            player1UsernameSpan.text(player1UserName);
+        } else if (hasPlayer2 && !hasPlayer1) {
+            var player2userName = snapshot.child("2").val().name;
+            player2UsernameSpan.text(player2userName);
+        } else {
+            var player1UserName = snapshot.child("1").val().name;
+            player1UsernameSpan.text(player1UserName);
+            var player2userName = snapshot.child("2").val().name;
+            player2UsernameSpan.text(player2userName);
+        }
+    }
 });
 
 database.ref().on(
     "child_added",
     function(snapshot) {
         // Log everything that's coming out of snapshot
-        console.log(snapshot.val());
+        // console.log(snapshot.val());
     },
     function(errorObject) {
         console.log("Errors handled: " + errorObject.code);
