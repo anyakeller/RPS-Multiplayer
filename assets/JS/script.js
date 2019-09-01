@@ -34,7 +34,7 @@ var specatators = database.ref("spectators");
 // Initial Values
 var playerName = "";
 
-// Capture Button Click
+// On username submit
 $("#chooseUsernamethingy").on("click", function(event) {
     yourUsername = $("#usernameField").val();
     $("#usernameField").val("");
@@ -55,21 +55,28 @@ $("#chooseUsernamethingy").on("click", function(event) {
     } else {
         var you = database.ref("/spectators/" + yourUsername);
     }
+    // create your databse data
     you.set({
         name: yourUsername,
         playernum: whichPlayerYou,
         wins: 0,
         losses: 0,
-        choice: "none"
+        choice: "none",
+        dumbChoiceName: "none"
     });
+
+    // Update username Display
+    playerInfo.text("Your Username: " + yourUsername);
 
     //chat room
     var youChat = database.ref("/chatRoom/" + Date.now());
+
     //disconnect remove user
     setupPlayerGame(whichPlayerYou);
     you.onDisconnect().remove();
     youChat.onDisconnect().remove();
 });
+
 // Firebase stuff
 //Setup page
 players.on("value", function(snapshot) {
@@ -91,15 +98,15 @@ players.on("value", function(snapshot) {
     if (activePlayersOnline > 0) {
         if (hasPlayer1 && !hasPlayer2) {
             var player1UserName = snapshot.child("1").val().name;
-            player1UsernameSpan.text(player1UserName);
+            player1UsernameSpan.text("Player 1: " + player1UserName);
         } else if (hasPlayer2 && !hasPlayer1) {
             var player2userName = snapshot.child("2").val().name;
-            player2UsernameSpan.text(player2userName);
+            player2UsernameSpan.text("Player 2: " + player2userName);
         } else {
             var player1UserName = snapshot.child("1").val().name;
-            player1UsernameSpan.text(player1UserName);
+            player1UsernameSpan.text("Player 1: " + player1UserName);
             var player2userName = snapshot.child("2").val().name;
-            player2UsernameSpan.text(player2userName);
+            player2UsernameSpan.text("Player 2: " + player1UserName);
         }
     }
 });
@@ -123,22 +130,43 @@ function setupPlayerGame(playerNum) {
         "Thin Ink-Friendly Potato",
         "Sharp Potato for Cutting"
     ];
+
+    // prompt text
+    var promptText = $("<h5>");
+    promptText.text("Pick your poison... or potato");
+    if (playerNum == 1) {
+        player1game.append(promptText);
+    } else {
+        player2game.append(promptText);
+    }
+
+    // Display Player Choice btns
     for (var i = 0; i < optns.length; i++) {
         var playerChoiceBtn = $("<button>");
         playerChoiceBtn.addClass("btn btn-secondary btn-lg btn-block");
         playerChoiceBtn.attr("data_optn", optns[i]);
+        playerChoiceBtn.attr("data_dumbOptnName", optnsText[i]);
         playerChoiceBtn.attr("data_whichPlayerOptns", playerNum.toString());
         playerChoiceBtn.text(optnsText[i]);
         playerChoiceBtn.on("click", function() {
             // console.log($(this).attr("data_optn"));
             var yourChoice = $(this).attr("data_optn");
-            database.ref("/players/1").update({ choice: yourChoice });
             database
-                .ref("/players/" + playerNum.toString())
-                .once("value")
-                .then(function(snapshot) {
-                    console.log(snapshot.val().choice);
-                });
+                .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
+                .update({ choice: yourChoice });
+            var dumbChoiceName = $(this).attr("data_optn");
+            database
+                .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
+                .update({ dumbChoiceName: $(this).attr("data_dumbOptnName") });
+            // degbug log the choice in database
+            // database
+            //     .ref("/players/" + playerNum.toString())
+            //     .once("value")
+            //     .then(function(snapshot) {
+            //         console.log(snapshot.val().choice);
+            //     });
+            // function for when player makes choice
+            playerChoose(playerNum, yourChoice, dumbChoiceName);
         });
         if (playerNum == 1) {
             player1game.append(playerChoiceBtn);
@@ -149,25 +177,30 @@ function setupPlayerGame(playerNum) {
 }
 
 //when player makes choice
-function playerChoose(playerNum, choice) {
-    var playerGameChoiceDiv = $("<div>");
+function playerChoose(playerNum, choice, dumbChoiceName) {
+    // display choice made div
+
+    var yourChoiceText = $("<h4>");
+    yourChoiceText.text("You chose " + choice);
+
+    console.log("Player " + playerNum + " chose " + dumbChoiceName);
 
     if (playerNum == 1) {
-        console.log(players.child("1"));
         player1game.empty();
+        player1game.append(yourChoiceText);
     } else {
-        console.log(players.child("2"));
         player2game.empty();
+        player2game.append(yourChoiceText);
     }
 }
 
-//when player disconnects
+// when player disconnects remove player display
 function playerDisconnect(playerNum) {
     if (playerNum == 1) {
         player1game.empty();
         player1UsernameSpan.text("Waiting for player to join...");
     } else {
         player2game.empty();
-        player2UsernameSpan.text("PWaiting for player to join...");
+        player2UsernameSpan.text("Waiting for player to join...");
     }
 }
