@@ -68,6 +68,9 @@ $("#chooseUsernamethingy").on("click", function(event) {
     //disconnect remove user
     you.onDisconnect().remove();
     youChat.onDisconnect().remove();
+    if (activePlayersOnline == 2) {
+        setupPlayerGame();
+    }
 });
 // Firebase stuff
 //Setup page
@@ -76,7 +79,6 @@ players.on("value", function(snapshot) {
     hasPlayer2 = snapshot.child("2").exists();
     activePlayersOnline = snapshot.numChildren();
     if (activePlayersOnline > 0) {
-        console.log("ppl playing");
         if (hasPlayer1 && !hasPlayer2) {
             var player1UserName = snapshot.child("1").val().name;
 
@@ -90,9 +92,6 @@ players.on("value", function(snapshot) {
             var player2userName = snapshot.child("2").val().name;
             player2UsernameSpan.text(player2userName);
         }
-    }
-    if (activePlayersOnline == 2) {
-        setupPlayerGame();
     }
 });
 
@@ -122,10 +121,9 @@ function setupPlayerGame() {
         playerChoiceBtn.attr("data_whichPlayerOptns", "1");
         playerChoiceBtn.text(optnsText[i]);
         playerChoiceBtn.on("click", function() {
-            // playerChoose(1, thisOptn);
-            // console.log(thisOptn);
-            // database.ref("/players/1").update({ choice: this.data_optn });
-
+            // console.log($(this).attr("data_optn"));
+            var yourChoice = $(this).attr("data_optn");
+            database.ref("/players/1").update({ choice: yourChoice });
             database
                 .ref("/players/1")
                 .once("value")
