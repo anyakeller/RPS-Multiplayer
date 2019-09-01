@@ -66,22 +66,31 @@ $("#chooseUsernamethingy").on("click", function(event) {
     //chat room
     var youChat = database.ref("/chatRoom/" + Date.now());
     //disconnect remove user
+    setupPlayerGame(whichPlayerYou);
     you.onDisconnect().remove();
     youChat.onDisconnect().remove();
-    if (activePlayersOnline == 2) {
-        setupPlayerGame();
-    }
 });
 // Firebase stuff
 //Setup page
 players.on("value", function(snapshot) {
+    //if value changes because player disconnect
     hasPlayer1 = snapshot.child("1").exists();
     hasPlayer2 = snapshot.child("2").exists();
+    // if there were more than one player, check to see if they left
+    if (activePlayersOnline > 0) {
+        if (!hasPlayer1) {
+            playerDisconnect(1);
+        }
+        if (!hasPlayer2) {
+            playerDisconnect(2);
+        }
+    }
+
+    //setup
     activePlayersOnline = snapshot.numChildren();
     if (activePlayersOnline > 0) {
         if (hasPlayer1 && !hasPlayer2) {
             var player1UserName = snapshot.child("1").val().name;
-
             player1UsernameSpan.text(player1UserName);
         } else if (hasPlayer2 && !hasPlayer1) {
             var player2userName = snapshot.child("2").val().name;
@@ -107,7 +116,7 @@ database.ref().on(
 );
 
 //sets up player click options
-function setupPlayerGame() {
+function setupPlayerGame(playerNum) {
     var optns = ["rock", "paper", "scissors"];
     var optnsText = [
         "Hardened Potato",
@@ -118,32 +127,24 @@ function setupPlayerGame() {
         var playerChoiceBtn = $("<button>");
         playerChoiceBtn.addClass("btn btn-secondary btn-lg btn-block");
         playerChoiceBtn.attr("data_optn", optns[i]);
-        playerChoiceBtn.attr("data_whichPlayerOptns", "1");
+        playerChoiceBtn.attr("data_whichPlayerOptns", playerNum.toString());
         playerChoiceBtn.text(optnsText[i]);
         playerChoiceBtn.on("click", function() {
             // console.log($(this).attr("data_optn"));
             var yourChoice = $(this).attr("data_optn");
             database.ref("/players/1").update({ choice: yourChoice });
             database
-                .ref("/players/1")
+                .ref("/players/" + playerNum.toString())
                 .once("value")
                 .then(function(snapshot) {
                     console.log(snapshot.val().choice);
                 });
         });
-        player1game.append(playerChoiceBtn);
-    }
-    for (var i = 0; i < optns.length; i++) {
-        var playerChoiceBtn = $("<button>");
-        playerChoiceBtn.addClass("btn btn-secondary btn-lg btn-block");
-        playerChoiceBtn.attr("data_optn", optns[i]);
-        playerChoiceBtn.attr("data_whichPlayerOptns", "2");
-        playerChoiceBtn.text(optnsText[i]);
-        playerChoiceBtn.on("click", function() {
-            // playerChoose(2, thisOptn);
-            // console.log(thisOptn);
-        });
-        player2game.append(playerChoiceBtn);
+        if (playerNum == 1) {
+            player1game.append(playerChoiceBtn);
+        } else {
+            player2game.append(playerChoiceBtn);
+        }
     }
 }
 
@@ -157,5 +158,16 @@ function playerChoose(playerNum, choice) {
     } else {
         console.log(players.child("2"));
         player2game.empty();
+    }
+}
+
+//when player disconnects
+function playerDisconnect(playerNum) {
+    if (playerNum == 1) {
+        player1game.empty();
+        player1UsernameSpan.text("Waiting for player to join...");
+    } else {
+        player2game.empty();
+        player2UsernameSpan.text("PWaiting for player to join...");
     }
 }
