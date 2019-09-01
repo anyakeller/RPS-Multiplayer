@@ -3,6 +3,8 @@ var playerInfo = $("#playerInfo"); //Displays who is playing
 var player1UsernameSpan = $("#player1"); //current player status
 var player2UsernameSpan = $("#player2");
 var gameStatus = $("#gameStatus");
+var player1game = $("#player1game");
+var player2game = $("#player2game");
 
 //GLOBAL VAR STUFF
 var yourUsername = "";
@@ -27,7 +29,7 @@ firebase.initializeApp(config);
 var database = firebase.database();
 // Database var references
 var chatBox = database.ref("/chatRoom");
-var players = database.ref("players");
+var players = database.ref("/players");
 var specatators = database.ref("spectators");
 // Initial Values
 var playerName = "";
@@ -58,7 +60,7 @@ $("#chooseUsernamethingy").on("click", function(event) {
         playernum: whichPlayerYou,
         wins: 0,
         losses: 0,
-        choice: null
+        choice: "none"
     });
 
     //chat room
@@ -89,6 +91,9 @@ players.on("value", function(snapshot) {
             player2UsernameSpan.text(player2userName);
         }
     }
+    if (activePlayersOnline == 2) {
+        setupPlayerGame();
+    }
 });
 
 database.ref().on(
@@ -101,3 +106,58 @@ database.ref().on(
         console.log("Errors handled: " + errorObject.code);
     }
 );
+
+//sets up player click options
+function setupPlayerGame() {
+    var optns = ["rock", "paper", "scissors"];
+    var optnsText = [
+        "Hardened Potato",
+        "Thin Ink-Friendly Potato",
+        "Sharp Potato for Cutting"
+    ];
+    for (var i = 0; i < optns.length; i++) {
+        var playerChoiceBtn = $("<button>");
+        playerChoiceBtn.addClass("btn btn-secondary btn-lg btn-block");
+        playerChoiceBtn.attr("data_optn", optns[i]);
+        playerChoiceBtn.attr("data_whichPlayerOptns", "1");
+        playerChoiceBtn.text(optnsText[i]);
+        playerChoiceBtn.on("click", function() {
+            // playerChoose(1, thisOptn);
+            // console.log(thisOptn);
+            // database.ref("/players/1").update({ choice: this.data_optn });
+
+            database
+                .ref("/players/1")
+                .once("value")
+                .then(function(snapshot) {
+                    console.log(snapshot.val().choice);
+                });
+        });
+        player1game.append(playerChoiceBtn);
+    }
+    for (var i = 0; i < optns.length; i++) {
+        var playerChoiceBtn = $("<button>");
+        playerChoiceBtn.addClass("btn btn-secondary btn-lg btn-block");
+        playerChoiceBtn.attr("data_optn", optns[i]);
+        playerChoiceBtn.attr("data_whichPlayerOptns", "2");
+        playerChoiceBtn.text(optnsText[i]);
+        playerChoiceBtn.on("click", function() {
+            // playerChoose(2, thisOptn);
+            // console.log(thisOptn);
+        });
+        player2game.append(playerChoiceBtn);
+    }
+}
+
+//when player makes choice
+function playerChoose(playerNum, choice) {
+    var playerGameChoiceDiv = $("<div>");
+
+    if (playerNum == 1) {
+        console.log(players.child("1"));
+        player1game.empty();
+    } else {
+        console.log(players.child("2"));
+        player2game.empty();
+    }
+}
