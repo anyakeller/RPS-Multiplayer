@@ -12,6 +12,7 @@ var activePlayersOnline = 0; //0 1 or 2
 var whichPlayerYou = 0; //0 for not active, 1 or 2 for active
 var hasPlayer1 = false;
 var hasPlayer2 = false;
+var whoBeatsWho = { paper: "rock", scissors: "paper", rock: "scissors" };
 
 // Firebase
 var config = {
@@ -61,8 +62,8 @@ $("#chooseUsernamethingy").on("click", function(event) {
         playernum: whichPlayerYou,
         wins: 0,
         losses: 0,
-        choice: "none",
-        dumbChoiceName: "none"
+        choice: "",
+        dumbChoiceName: ""
     });
 
     // Update username Display
@@ -97,17 +98,47 @@ players.on("value", function(snapshot) {
     //if value change was player choosing rps
     if (hasPlayer1) {
         var player1var = snapshot.child("1");
-        if (whichPlayerYou != 1 && player1var.val().choice !== "none") {
+        if (whichPlayerYou != 1 && player1var.val().choice !== "") {
             player1game.text("Player 1 has made their choice");
         }
     }
     if (hasPlayer2) {
         var player2var = snapshot.child("2");
-        if (whichPlayerYou != 2 && player2var.val().choice !== "none") {
+        if (whichPlayerYou != 2 && player2var.val().choice !== "") {
             player2game.text("Player 2 has made their choice");
         }
     }
+    // console.log("yeet"); //this really doesn't help with debugging
+    // when both players have chosen, do win logic
+    // IDK why it runs this twice but I can't fix it
+    if (hasPlayer1 && hasPlayer2) {
+        var player1Choice = snapshot.child("1").val().choice;
+        var player2Choice = snapshot.child("2").val().choice;
+        if (player1Choice !== "" && player2Choice !== "") {
+            console.log("yee");
+            var winner = whoWins(player1Choice, player2Choice);
+            if (winner == 0) {
+                gameStatus.text("It's a Tie");
+            } else if (winner == 1) {
+                gameStatus.text("Player 1 wins!");
+            } else {
+                gameStatus.text("Player 2 wins!");
+            }
+        }
+    }
 });
+
+// check who wins helper function
+// returns 0 for tie, 1 or 2 for winner
+function whoWins(player1Choice, player2Choice) {
+    if (player1Choice === player2Choice) {
+        return 0;
+    } else if (whoBeatsWho[player1Choice] === player2Choice) {
+        return 1;
+    } else {
+        return 2;
+    }
+}
 
 players.on(
     "child_added",
@@ -163,7 +194,7 @@ function setupPlayerGame(playerNum) {
             // update your choice in databse
             database
                 .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
-                .update({ choice: yourChoice }, function() {});
+                .update({ choice: yourChoice });
             var dumbChoiceName = $(this).attr("data_optn");
             database
                 .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
@@ -202,6 +233,13 @@ function playerChoose(playerNum, choice, dumbChoiceName) {
         player2game.empty();
         player2game.append(yourChoiceText);
     }
+}
+
+// resets game for next round
+function resetForNewRound() {
+    //reset player choices
+    database.ref("/players/1").update({ choice: "" });
+    database.ref("/players/2").update({ choice: "" });
 }
 
 // when player disconnects remove player display
