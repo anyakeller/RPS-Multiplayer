@@ -93,6 +93,20 @@ players.on("value", function(snapshot) {
         }
     }
     activePlayersOnline = snapshot.numChildren();
+
+    //if value change was player choosing rps
+    if (hasPlayer1) {
+        var player1var = snapshot.child("1");
+        if (whichPlayerYou != 1 && player1var.val().choice !== "none") {
+            player1game.text("Player 1 has made their choice");
+        }
+    }
+    if (hasPlayer2) {
+        var player2var = snapshot.child("2");
+        if (whichPlayerYou != 2 && player2var.val().choice !== "none") {
+            player2game.text("Player 2 has made their choice");
+        }
+    }
 });
 
 players.on(
@@ -142,12 +156,14 @@ function setupPlayerGame(playerNum) {
         playerChoiceBtn.attr("data_dumbOptnName", optnsText[i]);
         playerChoiceBtn.attr("data_whichPlayerOptns", playerNum.toString());
         playerChoiceBtn.text(optnsText[i]);
+        // when player makes choice
         playerChoiceBtn.on("click", function() {
             // console.log($(this).attr("data_optn"));
             var yourChoice = $(this).attr("data_optn");
+            // update your choice in databse
             database
                 .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
-                .update({ choice: yourChoice });
+                .update({ choice: yourChoice }, function() {});
             var dumbChoiceName = $(this).attr("data_optn");
             database
                 .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
