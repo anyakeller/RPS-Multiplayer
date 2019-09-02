@@ -13,6 +13,12 @@ var whichPlayerYou = 0; //0 for not active, 1 or 2 for active
 var hasPlayer1 = false;
 var hasPlayer2 = false;
 var whoBeatsWho = { paper: "rock", scissors: "paper", rock: "scissors" };
+var optns = ["rock", "paper", "scissors"];
+var optnsText = [
+    "Hardened Potato",
+    "Thin Ink-Friendly Potato",
+    "Sharp Potato for Cutting"
+];
 
 // Firebase
 var config = {
@@ -32,6 +38,8 @@ var database = firebase.database();
 var chatBox = database.ref("/chatRoom");
 var players = database.ref("/players");
 var specatators = database.ref("spectators");
+var roundInfo = database.ref("/roundInfo");
+roundInfo.set({ roundNumber: 0, roundStatus: true });
 // Initial Values
 var playerName = "";
 
@@ -62,6 +70,7 @@ $("#chooseUsernamethingy").on("click", function(event) {
         playernum: whichPlayerYou,
         wins: 0,
         losses: 0,
+        ties: 0,
         choice: "",
         dumbChoiceName: ""
     });
@@ -109,21 +118,81 @@ players.on("value", function(snapshot) {
         }
     }
     // console.log("yeet"); //this really doesn't help with debugging
+});
+
+database.ref().on("value", function(snapshot) {
     // when both players have chosen, do win logic
     // IDK why it runs this twice but I can't fix it
-    if (hasPlayer1 && hasPlayer2) {
-        var player1Choice = snapshot.child("1").val().choice;
-        var player2Choice = snapshot.child("2").val().choice;
+    var roundStatus = snapshot.child("/roundInfo/").val().roundStatus;
+    if (hasPlayer1 && hasPlayer2 && roundStatus) {
+        var player1Choice = snapshot
+            .child("players")
+            .child("1")
+            .val().choice;
+        var player2Choice = snapshot
+            .child("players")
+            .child("2")
+            .val().choice;
+
         if (player1Choice !== "" && player2Choice !== "") {
-            console.log("yee");
+            database.ref("/roundInfo").update({
+                roundStatus: false
+            });
             var winner = whoWins(player1Choice, player2Choice);
+            console.log(winner + " won");
+
             if (winner == 0) {
                 gameStatus.text("It's a Tie");
+                database.ref("/players/1").update({
+                    ties:
+                        snapshot
+                            .child("players")
+                            .child("1")
+                            .val().ties + 1
+                });
+                database.ref("/players/2").update({
+                    ties:
+                        snapshot
+                            .child("players")
+                            .child("2")
+                            .val().ties + 1
+                });
             } else if (winner == 1) {
                 gameStatus.text("Player 1 wins!");
+                database.ref("/players/1").update({
+                    wins:
+                        snapshot
+                            .child("players")
+                            .child("1")
+                            .val().wins + 1
+                });
+                database.ref("/players/2").update({
+                    losses:
+                        snapshot
+                            .child("players")
+                            .child("2")
+                            .val().losses + 1
+                });
             } else {
                 gameStatus.text("Player 2 wins!");
+                database.ref("/players/1").update({
+                    losses:
+                        snapshot
+                            .child("players")
+                            .child("1")
+                            .val().losses + 1
+                });
+                database.ref("/players/2").update({
+                    wins:
+                        snapshot
+                            .child("players")
+                            .child("2")
+                            .val().wins + 1
+                });
             }
+            //Start next game button
+            var startNextGameBtn = $("<button>");
+            startNextGameBtn.addClass("btn btn-secondary btn-lg btn-block");
         }
     }
 });
@@ -163,13 +232,6 @@ players.on(
 
 //sets up player click options
 function setupPlayerGame(playerNum) {
-    var optns = ["rock", "paper", "scissors"];
-    var optnsText = [
-        "Hardened Potato",
-        "Thin Ink-Friendly Potato",
-        "Sharp Potato for Cutting"
-    ];
-
     // prompt text
     var promptText = $("<h5>");
     promptText.text("Pick your poison... or potato");
@@ -240,6 +302,8 @@ function resetForNewRound() {
     //reset player choices
     database.ref("/players/1").update({ choice: "" });
     database.ref("/players/2").update({ choice: "" });
+    setupPlayerGame(1);
+    setupPlayerGame(2);
 }
 
 // when player disconnects remove player display
@@ -251,4 +315,5 @@ function playerDisconnect(playerNum) {
         player2game.empty();
         player2UsernameSpan.text("Waiting for player to join...");
     }
+    // database.ref("/players/" + playerNum).update({ choice: "" });
 }
