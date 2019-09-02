@@ -92,30 +92,24 @@ players.on("value", function(snapshot) {
             playerDisconnect(2);
         }
     }
-
-    //setup
     activePlayersOnline = snapshot.numChildren();
-    if (activePlayersOnline > 0) {
-        if (hasPlayer1 && !hasPlayer2) {
-            var player1UserName = snapshot.child("1").val().name;
-            player1UsernameSpan.text("Player 1: " + player1UserName);
-        } else if (hasPlayer2 && !hasPlayer1) {
-            var player2userName = snapshot.child("2").val().name;
-            player2UsernameSpan.text("Player 2: " + player2userName);
-        } else {
-            var player1UserName = snapshot.child("1").val().name;
-            player1UsernameSpan.text("Player 1: " + player1UserName);
-            var player2userName = snapshot.child("2").val().name;
-            player2UsernameSpan.text("Player 2: " + player1UserName);
-        }
-    }
 });
 
-database.ref().on(
+players.on(
     "child_added",
     function(snapshot) {
         // Log everything that's coming out of snapshot
         // console.log(snapshot.val());
+        //setup
+
+        if (snapshot.val().playernum == 1) {
+            // console.log("player 1 and no player 2");
+            var player1UserName = snapshot.val().name;
+            player1UsernameSpan.text("Player 1: " + player1UserName);
+        } else {
+            var player2UserName = snapshot.val().name;
+            player2UsernameSpan.text("Player 2: " + player2UserName);
+        }
     },
     function(errorObject) {
         console.log("Errors handled: " + errorObject.code);
