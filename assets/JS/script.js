@@ -8,7 +8,7 @@ var player2game = $("#player2game");
 var roundNum = $("#roundNum");
 
 //GLOBAL VAR STUFF
-var yourUsername = "";
+var yourUsername = "Default Potato";
 var activePlayersOnline = 0; //0 1 or 2
 var whichPlayerYou = 0; //0 for not active, 1 or 2 for active
 var hasPlayer1 = false;
@@ -37,7 +37,7 @@ firebase.initializeApp(config);
 var database = firebase.database();
 // Database var references
 var chatBox = database.ref("/chatRoom");
-var players = database.ref("/players");
+var players = database.ref("/players/");
 var specatators = database.ref("spectators");
 var roundInfo = database.ref("/roundInfo");
 roundInfo.set({ roundNumber: 0, roundStatus: true });
@@ -52,7 +52,10 @@ roundInfo.on("value", function(snapshot) {
 
 // On username submit
 $("#chooseUsernamethingy").on("click", function(event) {
-    yourUsername = $("#usernameField").val();
+    usernameInput = $("#usernameField").val();
+    if (usernameInput.trim() !== "") {
+        yourUsername = usernameInput;
+    }
     $("#usernameField").val("");
     console.log(yourUsername);
     $("#usernameInputForm").hide();
@@ -68,6 +71,7 @@ $("#chooseUsernamethingy").on("click", function(event) {
 
         console.log("New active Player", whichPlayerYou);
         var you = database.ref("/players/" + whichPlayerYou);
+        $("#whichPlayerNum").text("You are player number " + whichPlayerYou);
     } else {
         var you = database.ref("/spectators/" + yourUsername);
     }
@@ -134,7 +138,16 @@ players.on("value", function(playerSnap) {
             playerSnap.child("1").val().playerReady &&
             playerSnap.child("2").val().playerReady
         ) {
+            database.ref("/roundInfo").update({
+                roundStatus: true
+            });
+            gameStatus.text("Game started. Players choosing.");
             setupPlayerGame(whichPlayerYou);
+            if (whichPlayerYou == 1) {
+                player2game.text("player choosing");
+            } else {
+                player1game.text("player choosing");
+            }
         } else {
             database
                 .ref("/roundInfo/")
@@ -285,7 +298,7 @@ players.on(
 
 //sets up player click options
 function setupPlayerGame(playerNum) {
-    database.ref("/players" + playerNum).update({ choice: "" });
+    database.ref("/players/" + playerNum).update({ choice: "" });
     // prompt text
     var promptText = $("<h5>");
     promptText.text("Pick your poison... or potato");
@@ -358,12 +371,16 @@ function playerChoose(playerNum, choice, dumbChoiceName) {
 
 // when player disconnects remove player display
 function playerDisconnect(playerNum) {
-    if (playerNum == 1) {
+    if (playerNum != whichPlayerYou && playerNum == 1) {
         player1game.empty();
         player1UsernameSpan.text("Waiting for player to join...");
+
+        player2game.empty();
     } else {
         player2game.empty();
         player2UsernameSpan.text("Waiting for player to join...");
+
+        player1game.empty();
     }
     // database.ref("/players/" + playerNum).update({ choice: "" });
 }
