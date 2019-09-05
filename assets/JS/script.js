@@ -72,7 +72,8 @@ $("#chooseUsernamethingy").on("click", function(event) {
         losses: 0,
         ties: 0,
         choice: "",
-        dumbChoiceName: ""
+        dumbChoiceName: "",
+        playerReady: true
     });
 
     // Update username Display
@@ -89,10 +90,10 @@ $("#chooseUsernamethingy").on("click", function(event) {
 
 // Firebase stuff
 //Setup page
-players.on("value", function(snapshot) {
+players.on("value", function(playerSnap) {
     //if value changes because player disconnect
-    hasPlayer1 = snapshot.child("1").exists();
-    hasPlayer2 = snapshot.child("2").exists();
+    hasPlayer1 = playerSnap.child("1").exists();
+    hasPlayer2 = playerSnap.child("2").exists();
     // if there were more than one player, check to see if they left
     if (activePlayersOnline > 0) {
         if (!hasPlayer1) {
@@ -102,25 +103,23 @@ players.on("value", function(snapshot) {
             playerDisconnect(2);
         }
     }
-    activePlayersOnline = snapshot.numChildren();
+    activePlayersOnline = playerSnap.numChildren();
 
     //if value change was player choosing rps
     if (hasPlayer1) {
-        var player1var = snapshot.child("1");
+        var player1var = playerSnap.child("1");
         if (whichPlayerYou != 1 && player1var.val().choice !== "") {
             player1game.text("Player 1 has made their choice");
         }
     }
     if (hasPlayer2) {
-        var player2var = snapshot.child("2");
+        var player2var = playerSnap.child("2");
         if (whichPlayerYou != 2 && player2var.val().choice !== "") {
             player2game.text("Player 2 has made their choice");
         }
     }
     // console.log("yeet"); //this really doesn't help with debugging
-});
 
-players.on("value", function(playerSnap) {
     // when both players have chosen, do win logic
     // IDK why it runs this twice but I can't fix it
 
@@ -131,7 +130,7 @@ players.on("value", function(playerSnap) {
             (function(playerSnap) {
                 return function(roundInfo) {
                     var roundStatus = roundInfo.val().roundStatus;
-                    if (hasPlayer1 && hasPlayer2 && roundStatus) {
+                    if (roundStatus && hasPlayer1 && hasPlayer2) {
                         var player1Choice = playerSnap.child("1").val().choice;
                         var player2Choice = playerSnap.child("2").val().choice;
 
@@ -139,6 +138,8 @@ players.on("value", function(playerSnap) {
                             database.ref("/roundInfo").update({
                                 roundStatus: false
                             });
+
+                            // Winner logic
                             var winner = whoWins(player1Choice, player2Choice);
                             console.log(winner + " won");
 
@@ -174,6 +175,27 @@ players.on("value", function(playerSnap) {
                             startNextGameBtn.addClass(
                                 "btn btn-secondary btn-lg btn-block"
                             );
+                            startNextGameBtn.text("Start Next Round");
+                            var otherPlayerReady = playerSnap.child("2").val()
+                                .playerReady;
+                            startNextGameBtn.on(
+                                "click",
+                                (function(otherPlayerReady) {
+                                    return function() {
+                                        database
+                                            .ref("/players/" + whichPlayerYou)
+                                            .update({
+                                                choice: ""
+                                            });
+                                        gameStatus.empty();
+                                        gameStatus.text(
+                                            "Waiting for other player to confirm begin"
+                                        );
+                                        console.log(otherPlayerReady);
+                                    };
+                                })(otherPlayerReady)
+                            );
+                            gameStatus.append(startNextGameBtn);
                         }
                     }
                 };
@@ -237,11 +259,12 @@ function setupPlayerGame(playerNum) {
         playerChoiceBtn.on("click", function() {
             // console.log($(this).attr("data_optn"));
             var yourChoice = $(this).attr("data_optn");
+
             // update your choice in databse
             database
                 .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
                 .update({ choice: yourChoice });
-            var dumbChoiceName = $(this).attr("data_optn");
+            var dumbChoiceName = $(this).attr("data_dumbOptnName");
             database
                 .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
                 .update({ dumbChoiceName: $(this).attr("data_dumbOptnName") });
@@ -268,7 +291,7 @@ function playerChoose(playerNum, choice, dumbChoiceName) {
     // display choice made div
 
     var yourChoiceText = $("<h4>");
-    yourChoiceText.text("You chose " + choice);
+    yourChoiceText.text("You chose " + dumbChoiceName);
 
     console.log("Player " + playerNum + " chose " + dumbChoiceName);
 
