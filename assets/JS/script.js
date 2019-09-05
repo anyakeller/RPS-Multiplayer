@@ -20,6 +20,10 @@ var optnsText = [
     "Thin Ink-Friendly Potato",
     "Sharp Potato for Cutting"
 ];
+var yourWins = 0;
+var yourLosses = 0;
+var yourTies = 0;
+var isScoring = false;
 
 // Firebase
 var config = {
@@ -59,7 +63,7 @@ $("#chooseUsernamethingy").on("click", function(event) {
     $("#usernameField").val("");
     console.log(yourUsername);
     $("#usernameInputForm").hide();
-
+    $("#yourGameStats").show();
     // If you can add a new active player
     if (activePlayersOnline < 2) {
         activePlayersOnline += 1;
@@ -163,9 +167,11 @@ players.on("value", function(playerSnap) {
                                     .choice;
 
                                 if (
+                                    isScoring &&
                                     player1Choice !== "" &&
                                     player2Choice !== ""
                                 ) {
+                                    isScoring = false;
                                     database.ref("/roundInfo").update({
                                         roundStatus: false,
                                         roundNumber:
@@ -178,7 +184,19 @@ players.on("value", function(playerSnap) {
                                         player2Choice
                                     );
                                     console.log(winner + " won");
+                                    //your stats update
+                                    if (winner == 0) {
+                                        yourTies++;
+                                        $("#ties").text(yourTies);
+                                    } else if (winner == whichPlayerYou) {
+                                        yourWins++;
+                                        $("#wins").text(yourWins);
+                                    } else {
+                                        yourLosses++;
+                                        $("#losses").text(yourLosses);
+                                    }
 
+                                    //database update
                                     if (winner == 0) {
                                         gameStatus.text("It's a Tie");
                                         database.ref("/players/1").update({
@@ -222,9 +240,12 @@ players.on("value", function(playerSnap) {
                                         "btn btn-secondary btn-lg btn-block"
                                     );
                                     startNextGameBtn.text("Start Next Round");
-                                    var otherPlayerReady = playerSnap
-                                        .child("2")
-                                        .val().playerReady;
+                                    var otherPlayerReady;
+                                    if (whichPlayerYou == 1) {
+                                        playerSnap.child("2").val().playerReady;
+                                    } else {
+                                        playerSnap.child("1").val().playerReady;
+                                    }
                                     startNextGameBtn.on(
                                         "click",
                                         (function(otherPlayerReady) {
@@ -298,7 +319,7 @@ players.on(
 
 //sets up player click options
 function setupPlayerGame(playerNum) {
-    database.ref("/players/" + playerNum).update({ choice: "" });
+    isScoring = true;
     // prompt text
     var promptText = $("<h5>");
     promptText.text("Pick your poison... or potato");
@@ -322,15 +343,13 @@ function setupPlayerGame(playerNum) {
         playerChoiceBtn.on("click", function() {
             // console.log($(this).attr("data_optn"));
             var yourChoice = $(this).attr("data_optn");
-
-            // update your choice in databse
-            database
-                .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
-                .update({ choice: yourChoice });
             var dumbChoiceName = $(this).attr("data_dumbOptnName");
-            database
-                .ref("/players/" + $(this).attr("data_whichPlayerOptns"))
-                .update({ dumbChoiceName: $(this).attr("data_dumbOptnName") });
+            // update your choice in databse
+            database.ref("/players/" + whichPlayerYou).update({
+                choice: yourChoice,
+                dumbChoiceName: dumbChoiceName
+            });
+
             // degbug log the choice in database
             // database
             //     .ref("/players/" + playerNum.toString())
@@ -371,7 +390,7 @@ function playerChoose(playerNum, choice, dumbChoiceName) {
 
 // when player disconnects remove player display
 function playerDisconnect(playerNum) {
-    if (playerNum != whichPlayerYou && playerNum == 1) {
+    if (playerNum == 1) {
         player1game.empty();
         player1UsernameSpan.text("Waiting for player to join...");
 
@@ -381,6 +400,9 @@ function playerDisconnect(playerNum) {
         player2UsernameSpan.text("Waiting for player to join...");
 
         player1game.empty();
+    }
+    if (playerNum == whichPlayerYou) {
+        $("#yourGameStats").hide();
     }
     // database.ref("/players/" + playerNum).update({ choice: "" });
 }
